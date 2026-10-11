@@ -15,15 +15,13 @@ Po pierwszej publikacji dodaj ten adres w F-Droid przez **Ustawienia → Repozyt
 - Minimalny Android: 6.0
 - APK pochodzi z [wydań autora](https://github.com/senikolo/Ispina-Lokalnie-/releases); to repozytorium nie kompiluje aplikacji ze źródeł.
 
-## Jednorazowa konfiguracja
+## Klucz podpisujący
 
-Workflow podpisuje indeks osobnym, stałym kluczem. Jego plik i hasła są przechowywane w **Settings → Secrets and variables → Actions** jako sekrety repozytorium o nazwach:
+Workflow używa jednego zaszyfrowanego sekretu GitHub Actions: `FDROID_REPO_KEYSTORE_B64`. Wartość sekretu to zakodowane Base64 32 losowych bajtów. Dzięki niej workflow odtwarza ten sam klucz podpisujący przy każdej publikacji; prywatny plik klucza i hasło powstają tylko na czas działania workflow.
 
-- `FDROID_REPO_KEYSTORE_B64`
-- `FDROID_REPO_KEYSTORE_PASSWORD`
-- `FDROID_REPO_KEY_PASSWORD`
+Nie zmieniaj ani nie usuwaj tego sekretu. Zmiana oznaczałaby nowy klucz repozytorium, którego dotychczasowi użytkownicy F-Droid nie zaakceptują automatycznie. Publiczny certyfikat repozytorium jest publikowany jako `repo-signing-cert.pem`; można go udostępniać.
 
-Nie umieszczaj pliku klucza, haseł ani wartości sekretów w publicznych plikach repozytorium, zgłoszeniach ani wiadomościach. Klucz musi pozostać taki sam przy każdej aktualizacji. Zachowaj bezpieczną kopię zapasową klucza i haseł; ich utrata może sprawić, że użytkownicy będą musieli usunąć i dodać repozytorium ponownie.
+Sekret znajdziesz w **Settings → Secrets and variables → Actions**. Wartość może wykorzystać każda osoba z dostępem do uruchamiania workflow w tym repozytorium, więc ogranicz dostęp do zaufanych współpracowników. Nie wklejaj sekretu do publicznych plików, zgłoszeń ani wiadomości.
 
 ## Publikacja nowego wydania — również z telefonu
 
@@ -34,4 +32,4 @@ Po opublikowaniu nowego stabilnego wydania w [repozytorium aplikacji](https://gi
 3. Naciśnij **Run workflow**, pozostaw gałąź `main` i uruchom workflow.
 4. Poczekaj, aż wykonanie zakończy się zielonym znacznikiem.
 
-Nie trzeba instalować narzędzi ani używać komputera. Workflow pobiera najnowszy stabilny APK, sprawdza jego sumę SHA-256 i podpis, generuje indeks F-Droid, a następnie publikuje pliki w GitHub Pages. Dostęp do edycji głównej gałęzi i workflow powinny mieć wyłącznie zaufane osoby.
+Nie trzeba instalować narzędzi ani używać komputera. Workflow pobiera najnowszy stabilny APK, sprawdza jego sumę SHA-256 i podpis, generuje indeks F-Droid, a następnie publikuje pliki w GitHub Pages.
