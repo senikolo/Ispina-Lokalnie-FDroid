@@ -46,7 +46,7 @@ jobs:
           points = [(54, 24), (24, 48), (30, 48), (30, 78), (46, 78), (46, 60), (62, 60), (62, 78), (78, 78), (78, 48), (84, 48)]
           draw = ImageDraw.Draw(image)
           draw.polygon([(round(x * size / 108), round(y * size / 108)) for x, y in points], fill="#FFFFFF")
-          output = Path("repo/icons/icon.png")
+          output = Path("icon.png")
           output.parent.mkdir(parents=True, exist_ok=True)
           image.resize((512, 512), Image.Resampling.LANCZOS).save(output, format="PNG", optimize=True)
           PY
