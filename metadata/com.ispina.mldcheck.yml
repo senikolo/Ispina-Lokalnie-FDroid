@@ -14,5 +14,7 @@ Description: |
   informacje o komunikacji, planer podróży i materiały historyczne.
 CurrentVersion: 1.83.20
 CurrentVersionCode: 18320
+AllowedAPKSigningKeys:
+  - 6d75baf7f4402ff93c93505fd6d7a5c0eab3d1c7c2aa2a39eeb5e4ae166f625f
 UpdateCheckMode: None
 AutoUpdateMode: None
