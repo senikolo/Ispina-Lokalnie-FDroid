@@ -27,7 +27,7 @@ jobs:
         run: |
           sudo add-apt-repository ppa:fdroid/fdroidserver -y
           sudo apt-get update
-          sudo apt-get install -y fdroidserver python3-pycryptodome openssl
+          sudo apt-get install -y fdroidserver python3-pycryptodome python3-venv openssl && /usr/bin/python3 -m venv "$RUNNER_TEMP/fdroidserver-venv" && "$RUNNER_TEMP/fdroidserver-venv/bin/pip" install "fdroidserver==2.4.5" "androguard==4.1.4"
 
       - name: Pobierz najnowszy APK i sprawdź jego podpis
         env:
@@ -128,7 +128,7 @@ jobs:
           with open("config.yml", "w", encoding="utf-8") as stream:
               yaml.safe_dump(config, stream, allow_unicode=True, sort_keys=False)
           PY
-          fdroid update --create-metadata
+          "$RUNNER_TEMP/fdroidserver-venv/bin/fdroid" update --create-metadata
 
       - name: Opublikuj repozytorium przez GitHub Pages
         run: |
