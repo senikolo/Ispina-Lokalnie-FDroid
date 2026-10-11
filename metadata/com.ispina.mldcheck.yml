@@ -1,0 +1,18 @@
+Categories:
+  - Navigation
+License: GPL-3.0-only
+AuthorName: Sławomir Franciszek Kozak
+AuthorEmail: ispinalokalnie@gmail.com
+WebSite: https://ispinalokalnie.com
+SourceCode: https://github.com/senikolo/Ispina-Lokalnie-
+IssueTracker: https://github.com/senikolo/Ispina-Lokalnie-/issues
+Name: Ispina Lokalnie
+Summary: Lokalne informacje, komunikacja i historia Ispiny
+Description: |
+  Ispina Lokalnie gromadzi informacje przydatne mieszkańcom i osobom
+  odwiedzającym Ispinę. Aplikacja zawiera między innymi lokalne aktualności,
+  informacje o komunikacji, planer podróży i materiały historyczne.
+CurrentVersion: 1.83.20
+CurrentVersionCode: 18320
+UpdateCheckMode: None
+AutoUpdateMode: None
