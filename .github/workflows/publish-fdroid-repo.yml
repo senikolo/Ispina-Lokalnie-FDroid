@@ -43,7 +43,7 @@ jobs:
             echo "Brakuje sekretu FDROID_REPO_KEYSTORE_B64." >&2
             exit 1
           fi
-          python3 - <<'PY'
+          /usr/bin/python3 - <<'PY'
           import base64
           import hashlib
           import hmac
@@ -77,7 +77,7 @@ jobs:
             openssl req -new -x509 -key fdroid-repo-key.pem -out repo-signing-cert.pem \
               -days 3650 -subj "/CN=Ispina Lokalnie Repository/O=Senikolo/C=PL"
           fi
-          KEYSTORE_PASSWORD="$(python3 - <<'PY'
+          KEYSTORE_PASSWORD="$(/usr/bin/python3 - <<'PY'
           import base64
           import hashlib
           import os
@@ -105,7 +105,7 @@ jobs:
           FDROID_REPO_KEY_SEED_B64: ${{ secrets.FDROID_REPO_KEYSTORE_B64 }}
         run: |
           set -eu
-          python3 - <<'PY'
+          /usr/bin/python3 - <<'PY'
           import base64
           import hashlib
           import os
