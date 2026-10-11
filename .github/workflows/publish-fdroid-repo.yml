@@ -27,43 +27,102 @@ jobs:
         run: |
           sudo add-apt-repository ppa:fdroid/fdroidserver -y
           sudo apt-get update
-          sudo apt-get install -y fdroidserver
+          sudo apt-get install -y fdroidserver python3-pycryptodome openssl
 
       - name: Pobierz najnowszy APK i sprawdź jego podpis
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: python3 scripts/fetch-latest-apk.py
 
-      - name: Odtwórz prywatny klucz repozytorium
+      - name: Odtwórz stały klucz podpisujący z sekretu
         env:
-          FDROID_REPO_KEYSTORE_B64: ${{ secrets.FDROID_REPO_KEYSTORE_B64 }}
+          FDROID_REPO_KEY_SEED_B64: ${{ secrets.FDROID_REPO_KEYSTORE_B64 }}
         run: |
           set -eu
-          if [ -z "$FDROID_REPO_KEYSTORE_B64" ]; then
+          if [ -z "$FDROID_REPO_KEY_SEED_B64" ]; then
             echo "Brakuje sekretu FDROID_REPO_KEYSTORE_B64." >&2
             exit 1
           fi
-          printf '%s' "$FDROID_REPO_KEYSTORE_B64" | base64 --decode > fdroid-repo-signing.jks
-          chmod 600 fdroid-repo-signing.jks
+          python3 - <<'PY'
+          import base64
+          import hashlib
+          import hmac
+          import os
+          from Crypto.PublicKey import RSA
+
+          seed = base64.b64decode(os.environ["FDROID_REPO_KEY_SEED_B64"], validate=True)
+          if len(seed) != 32:
+              raise SystemExit("Sekret repozytorium musi kodować dokładnie 32 bajty.")
+
+          class HmacStream:
+              def __init__(self, secret):
+                  self.secret = secret
+                  self.counter = 0
+                  self.buffer = b""
+
+              def __call__(self, amount):
+                  while len(self.buffer) < amount:
+                      message = b"fdroid-repo-rsa-v1" + self.counter.to_bytes(8, "big")
+                      self.buffer += hmac.new(self.secret, message, hashlib.sha256).digest()
+                      self.counter += 1
+                  result, self.buffer = self.buffer[:amount], self.buffer[amount:]
+                  return result
+
+          os.umask(0o077)
+          key = RSA.generate(2048, randfunc=HmacStream(seed), e=65537)
+          with open("fdroid-repo-key.pem", "wb") as stream:
+              stream.write(key.export_key(format="PEM"))
+          PY
+          if [ ! -f repo-signing-cert.pem ]; then
+            openssl req -new -x509 -key fdroid-repo-key.pem -out repo-signing-cert.pem \
+              -days 3650 -subj "/CN=Ispina Lokalnie Repository/O=Senikolo/C=PL"
+          fi
+          KEYSTORE_PASSWORD="$(python3 - <<'PY'
+          import base64
+          import hashlib
+          import os
+          seed = base64.b64decode(os.environ["FDROID_REPO_KEY_SEED_B64"], validate=True)
+          print(hashlib.sha256(b"fdroid-repo-keystore-password-v1" + seed).hexdigest())
+          PY
+          )"
+          KEY_PUBLIC="$(openssl pkey -in fdroid-repo-key.pem -pubout -outform DER | sha256sum | cut -d ' ' -f 1)"
+          CERT_PUBLIC="$(openssl x509 -in repo-signing-cert.pem -pubkey -noout | openssl pkey -pubin -outform DER | sha256sum | cut -d ' ' -f 1)"
+          if [ "$KEY_PUBLIC" != "$CERT_PUBLIC" ]; then
+            echo "Zapisany certyfikat repozytorium nie pasuje do sekretu klucza." >&2
+            exit 1
+          fi
+          openssl pkcs12 -export -inkey fdroid-repo-key.pem -in repo-signing-cert.pem \
+            -name fdroidrepo -out fdroid-repo-signing.p12 -passout "pass:$KEYSTORE_PASSWORD"
+          keytool -importkeystore -noprompt -srckeystore fdroid-repo-signing.p12 \
+            -srcstoretype PKCS12 -srcstorepass "$KEYSTORE_PASSWORD" -srcalias fdroidrepo \
+            -destkeystore fdroid-repo-signing.jks -deststoretype JKS \
+            -deststorepass "$KEYSTORE_PASSWORD" -destkeypass "$KEYSTORE_PASSWORD" \
+            -destalias fdroidrepo
+          chmod 600 fdroid-repo-key.pem fdroid-repo-signing.p12 fdroid-repo-signing.jks
 
       - name: Wygeneruj podpisany indeks F-Droid
         env:
-          FDROID_REPO_KEYSTORE_PASSWORD: ${{ secrets.FDROID_REPO_KEYSTORE_PASSWORD }}
-          FDROID_REPO_KEY_PASSWORD: ${{ secrets.FDROID_REPO_KEY_PASSWORD }}
+          FDROID_REPO_KEY_SEED_B64: ${{ secrets.FDROID_REPO_KEYSTORE_B64 }}
         run: |
           set -eu
           python3 - <<'PY'
+          import base64
+          import hashlib
           import os
           import yaml
 
+          seed = base64.b64decode(os.environ["FDROID_REPO_KEY_SEED_B64"], validate=True)
+          if len(seed) != 32:
+              raise SystemExit("Sekret repozytorium musi kodować dokładnie 32 bajty.")
+          password = hashlib.sha256(b"fdroid-repo-keystore-password-v1" + seed).hexdigest()
           config = {
               "repo_name": "Ispina Lokalnie",
               "repo_url": "https://senikolo.github.io/Ispina-Lokalnie-FDroid/repo",
               "repo_description": "Własne repozytorium APK aplikacji Ispina Lokalnie prowadzone przez autora.",
               "repo_keyalias": "fdroidrepo",
               "keystore": "fdroid-repo-signing.jks",
-              "keystorepass": os.environ["FDROID_REPO_KEYSTORE_PASSWORD"],
-              "keypass": os.environ["FDROID_REPO_KEY_PASSWORD"],
+              "keystorepass": password,
+              "keypass": password,
               "keydname": "CN=Ispina Lokalnie Repository, O=Senikolo, C=PL",
           }
           with open("config.yml", "w", encoding="utf-8") as stream:
@@ -77,7 +136,8 @@ jobs:
           rm -rf docs/repo
           mkdir -p docs/repo
           cp -a repo/. docs/repo/
-          git add metadata/com.ispina.mldcheck.yml docs/repo
+          cp repo-signing-cert.pem docs/repo/repo-signing-cert.pem
+          git add metadata/com.ispina.mldcheck.yml docs/repo repo-signing-cert.pem
           if git diff --cached --quiet; then
             echo "Repozytorium nie wymaga zmian."
           else
