@@ -1,0 +1,88 @@
+name: Publikuj repozytorium F-Droid
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fdroid-repo-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Ogranicz publikację do gałęzi main
+        run: test "$GITHUB_REF" = "refs/heads/main"
+
+      - name: Pobierz repozytorium
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          token: ${{ github.token }}
+
+      - name: Zainstaluj narzędzia F-Droid
+        run: |
+          sudo add-apt-repository ppa:fdroid/fdroidserver -y
+          sudo apt-get update
+          sudo apt-get install -y fdroidserver
+
+      - name: Pobierz najnowszy APK i sprawdź jego podpis
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/fetch-latest-apk.py
+
+      - name: Odtwórz prywatny klucz repozytorium
+        env:
+          FDROID_REPO_KEYSTORE_B64: ${{ secrets.FDROID_REPO_KEYSTORE_B64 }}
+        run: |
+          set -eu
+          if [ -z "$FDROID_REPO_KEYSTORE_B64" ]; then
+            echo "Brakuje sekretu FDROID_REPO_KEYSTORE_B64." >&2
+            exit 1
+          fi
+          printf '%s' "$FDROID_REPO_KEYSTORE_B64" | base64 --decode > fdroid-repo-signing.jks
+          chmod 600 fdroid-repo-signing.jks
+
+      - name: Wygeneruj podpisany indeks F-Droid
+        env:
+          FDROID_REPO_KEYSTORE_PASSWORD: ${{ secrets.FDROID_REPO_KEYSTORE_PASSWORD }}
+          FDROID_REPO_KEY_PASSWORD: ${{ secrets.FDROID_REPO_KEY_PASSWORD }}
+        run: |
+          set -eu
+          python3 - <<'PY'
+          import os
+          import yaml
+
+          config = {
+              "repo_name": "Ispina Lokalnie",
+              "repo_url": "https://senikolo.github.io/Ispina-Lokalnie-FDroid/repo",
+              "repo_description": "Własne repozytorium APK aplikacji Ispina Lokalnie prowadzone przez autora.",
+              "repo_keyalias": "fdroidrepo",
+              "keystore": "fdroid-repo-signing.jks",
+              "keystorepass": os.environ["FDROID_REPO_KEYSTORE_PASSWORD"],
+              "keypass": os.environ["FDROID_REPO_KEY_PASSWORD"],
+              "keydname": "CN=Ispina Lokalnie Repository, O=Senikolo, C=PL",
+          }
+          with open("config.yml", "w", encoding="utf-8") as stream:
+              yaml.safe_dump(config, stream, allow_unicode=True, sort_keys=False)
+          PY
+          fdroid update --create-metadata
+
+      - name: Opublikuj repozytorium przez GitHub Pages
+        run: |
+          set -eu
+          rm -rf docs/repo
+          mkdir -p docs/repo
+          cp -a repo/. docs/repo/
+          git add metadata/com.ispina.mldcheck.yml docs/repo
+          if git diff --cached --quiet; then
+            echo "Repozytorium nie wymaga zmian."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Publikuj aktualizację repozytorium F-Droid"
+            git push origin HEAD:main
+          fi
