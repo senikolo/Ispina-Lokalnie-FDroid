@@ -1,0 +1,12 @@
+# Pliki prywatne F-Droid — nie publikuj ich
+/config.yml
+/keystore/
+/unsigned/
+/tmp/
+/repo/*
+/*.jks
+/*.keystore
+/*.p12
+
+# Logi lokalne
+*.log
