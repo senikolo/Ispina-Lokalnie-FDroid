@@ -1,69 +1,37 @@
-# Własne repozytorium F-Droid — Ispina Lokalnie
+# Ispina Lokalnie — repozytorium dla F-Droid
 
-To repozytorium przygotowuje własne źródło aplikacji Ispina Lokalnie dla aplikacji F-Droid. Jest prowadzone przez autora aplikacji i **nie należy do głównego katalogu f-droid.org**.
+To niezależne repozytorium udostępnia aplikację Ispina Lokalnie w kliencie F-Droid. Prowadzi je autor aplikacji; nie jest częścią głównego katalogu [f-droid.org](https://f-droid.org/).
 
-## Aktualny stan
+## Adres repozytorium
 
-Repozytorium GitHub już istnieje i zawiera instrukcje oraz pliki przygotowawcze. Nie jest jeszcze gotowe do dodania w aplikacji F-Droid: trzeba najpierw wygenerować podpisany indeks i opublikować pliki w katalogu GitHub Pages `docs/`.
+`https://senikolo.github.io/Ispina-Lokalnie-FDroid/repo`
 
-Planowany adres repozytorium F-Droid:
+Po pierwszej publikacji dodaj ten adres w F-Droid przez **Ustawienia → Repozytoria → Dodaj repozytorium**.
 
-`https://senikolo.github.io/Ispina-Lokalnie-FDroid/`
+## Aplikacja
 
-## Przygotowana wersja aplikacji
-
-- Nazwa: Ispina Lokalnie Live 1.83.20
-- Identyfikator aplikacji: `com.ispina.mldcheck`
+- Nazwa: Ispina Lokalnie Live
+- Identyfikator: `com.ispina.mldcheck`
 - Minimalny Android: 6.0
-- APK pochodzi z [wydania 1.83.20](https://github.com/senikolo/Ispina-Lokalnie-/releases/tag/v1.83.20)
-- SHA-256: `c9c0a0107310c3229b421a87832de1f1fc738b07db7ab1dc41eea2ead417e664`
+- APK pochodzi z [wydań autora](https://github.com/senikolo/Ispina-Lokalnie-/releases); to repozytorium nie kompiluje aplikacji ze źródeł.
 
-Skrypt pobierania sprawdza sumę SHA-256 przed użyciem pliku. To repozytorium przekazuje APK opublikowany przez autora; nie kompiluje go ze źródeł.
+## Jednorazowa konfiguracja
 
-## Przygotowanie repozytorium na Windowsie
+Workflow podpisuje indeks osobnym, stałym kluczem. Jego plik i hasła są przechowywane w **Settings → Secrets and variables → Actions** jako sekrety repozytorium o nazwach:
 
-Do wygenerowania indeksu potrzebny jest komputer z Windows i środowisko Ubuntu w WSL. Oficjalna instrukcja F-Droid opisuje instalację narzędzi dla WSL: [instalacja fdroidserver](https://f-droid.org/pl/docs/Installing_the_Server_and_Repo_Tools/).
+- `FDROID_REPO_KEYSTORE_B64`
+- `FDROID_REPO_KEYSTORE_PASSWORD`
+- `FDROID_REPO_KEY_PASSWORD`
 
-1. Zainstaluj Ubuntu w WSL, jeśli jeszcze go nie masz.
-2. Otwórz terminal Ubuntu i zainstaluj narzędzia:
-   ```bash
-   sudo add-apt-repository ppa:fdroid/fdroidserver
-   sudo apt update
-   sudo apt install fdroidserver git
-   ```
-3. Pobierz to repozytorium i przejdź do jego folderu:
-   ```bash
-   git clone https://github.com/senikolo/Ispina-Lokalnie-FDroid.git
-   cd Ispina-Lokalnie-FDroid
-   ```
-4. Pobierz i sprawdź APK:
-   ```bash
-   bash scripts/download-current-apk.sh
-   ```
-5. Utwórz klucz repozytorium (wykonuje się tylko raz):
-   ```bash
-   fdroid init
-   ```
-6. W lokalnym pliku `config.yml` ustaw wartości z pliku `repo-public-settings.yml`. Zachowaj `config.yml` i klucz na swoim komputerze. **Nie wysyłaj ich do GitHuba.**
-7. Wygeneruj indeks:
-   ```bash
-   bash scripts/update-repo.sh
-   ```
-8. Skopiuj wygenerowane pliki do folderu strony:
-   ```bash
-   cp -a repo/. docs/
-   ```
-9. W GitHubie otwórz **Settings → Pages**. W sekcji publikowania wybierz **Deploy from a branch**, gałąź `main` i folder `/docs`, a następnie zapisz.
-10. Dodaj zmienione pliki z folderu `docs/` do repozytorium i opublikuj je na GitHubie.
+Nie umieszczaj pliku klucza, haseł ani wartości sekretów w publicznych plikach repozytorium, zgłoszeniach ani wiadomościach. Klucz musi pozostać taki sam przy każdej aktualizacji. Zachowaj bezpieczną kopię zapasową klucza i haseł; ich utrata może sprawić, że użytkownicy będą musieli usunąć i dodać repozytorium ponownie.
 
-Po opublikowaniu indeksu użytkownicy będą mogli dodać w F-Droid adres podany wyżej: **Ustawienia → Repozytoria → Dodaj repozytorium**.
+## Publikacja nowego wydania — również z telefonu
 
-## Klucz repozytorium
+Po opublikowaniu nowego stabilnego wydania w [repozytorium aplikacji](https://github.com/senikolo/Ispina-Lokalnie-/releases):
 
-`fdroid init` tworzy prywatny klucz, którym podpisywany jest indeks repozytorium. Zachowaj go i zrób bezpieczną kopię zapasową. Jeśli go utracisz, aktualizacje z tego źródła mogą wymagać ponownego dodania repozytorium przez użytkowników.
+1. Otwórz kartę **Actions** w tym repozytorium.
+2. Wybierz workflow **Publikuj repozytorium F-Droid**.
+3. Naciśnij **Run workflow**, pozostaw gałąź `main` i uruchom workflow.
+4. Poczekaj, aż wykonanie zakończy się zielonym znacznikiem.
 
-Plik `config.yml`, klucz i hasła nie mogą trafić do publicznego GitHuba. Plik `.gitignore` zawiera reguły pomagające uniknąć ich przypadkowego dodania.
-
-## Aktualizacja aplikacji
-
-Przy następnym wydaniu trzeba zaktualizować nazwę pliku, adres wydania i sumę SHA-256 w skryptach pobierania, a następnie wygenerować nowy indeks i opublikować jego pliki w `docs/`.
+Nie trzeba instalować narzędzi ani używać komputera. Workflow pobiera najnowszy stabilny APK, sprawdza jego sumę SHA-256 i podpis, generuje indeks F-Droid, a następnie publikuje pliki w GitHub Pages. Dostęp do edycji głównej gałęzi i workflow powinny mieć wyłącznie zaufane osoby.
