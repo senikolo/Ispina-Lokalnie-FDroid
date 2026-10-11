@@ -111,17 +111,21 @@ jobs:
           import base64
           import hashlib
           import os
+          from pathlib import Path
           import yaml
 
           seed = base64.b64decode(os.environ["FDROID_REPO_KEY_SEED_B64"], validate=True)
           if len(seed) != 32:
               raise SystemExit("Sekret repozytorium musi kodować dokładnie 32 bajty.")
           password = hashlib.sha256(b"fdroid-repo-keystore-password-v1" + seed).hexdigest()
+          icon_bytes = Path("icon.png").read_bytes()
+          icon_name = f"icon-{hashlib.sha256(icon_bytes).hexdigest()[:16]}.png"
+          Path(icon_name).write_bytes(icon_bytes)
           config = {
               "repo_name": "Ispina Lokalnie",
               "repo_url": "https://senikolo.github.io/Ispina-Lokalnie-FDroid/repo",
               "repo_description": "Własne repozytorium APK aplikacji Ispina Lokalnie prowadzone przez autora.",
-              "repo_icon": "icon.png",
+              "repo_icon": icon_name,
               "repo_keyalias": "fdroidrepo",
               "keystore": "fdroid-repo-signing.jks",
               "keystorepass": password,
