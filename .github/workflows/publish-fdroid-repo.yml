@@ -27,12 +27,31 @@ jobs:
         run: |
           sudo add-apt-repository ppa:fdroid/fdroidserver -y
           sudo apt-get update
-          sudo apt-get install -y fdroidserver python3-pycryptodome python3-venv openssl && /usr/bin/python3 -m venv "$RUNNER_TEMP/fdroidserver-venv" && "$RUNNER_TEMP/fdroidserver-venv/bin/pip" install "fdroidserver==2.4.5" "androguard==4.1.4"
+          sudo apt-get install -y fdroidserver python3-pycryptodome python3-venv openssl python3-pil && /usr/bin/python3 -m venv "$RUNNER_TEMP/fdroidserver-venv" && "$RUNNER_TEMP/fdroidserver-venv/bin/pip" install "fdroidserver==2.4.5" "androguard==4.1.4"
 
       - name: Pobierz najnowszy APK i sprawdź jego podpis
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: python3 scripts/fetch-latest-apk.py
+      - name: Przygotuj ikonę repozytorium
+        run: |
+          set -eu
+          /usr/bin/python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image, ImageDraw
+
+          scale = 4
+          size = 512 * scale
+          image = Image.new("RGB", (size, size), "#2E7D32")
+          points = [(54, 24), (24, 48), (30, 48), (30, 78), (46, 78), (46, 60), (62, 60), (62, 78), (78, 78), (78, 48), (84, 48)]
+          draw = ImageDraw.Draw(image)
+          draw.polygon([(round(x * size / 108), round(y * size / 108)) for x, y in points], fill="#FFFFFF")
+          output = Path("repo/icons/icon.png")
+          output.parent.mkdir(parents=True, exist_ok=True)
+          image.resize((512, 512), Image.Resampling.LANCZOS).save(output, format="PNG", optimize=True)
+          PY
+
+
 
       - name: Odtwórz stały klucz podpisujący z sekretu
         env:
@@ -119,6 +138,7 @@ jobs:
               "repo_name": "Ispina Lokalnie",
               "repo_url": "https://senikolo.github.io/Ispina-Lokalnie-FDroid/repo",
               "repo_description": "Własne repozytorium APK aplikacji Ispina Lokalnie prowadzone przez autora.",
+              "repo_icon": "icon.png",
               "repo_keyalias": "fdroidrepo",
               "keystore": "fdroid-repo-signing.jks",
               "keystorepass": password,
