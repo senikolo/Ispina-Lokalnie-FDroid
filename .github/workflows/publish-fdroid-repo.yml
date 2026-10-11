@@ -48,7 +48,7 @@ jobs:
           import hashlib
           import hmac
           import os
-          from Crypto.PublicKey import RSA
+          from Cryptodome.PublicKey import RSA
 
           seed = base64.b64decode(os.environ["FDROID_REPO_KEY_SEED_B64"], validate=True)
           if len(seed) != 32:
