@@ -13,6 +13,8 @@ from PIL import Image
 BACKGROUND = "res/drawable/ic_launcher_background.png"
 FOREGROUND = "res/drawable/ic_launcher_foreground.png"
 OUTPUT_SIZE = (512, 512)
+# Keep the foreground mark at about 82% of the canvas width.
+FOREGROUND_SCALE = 1.22
 
 
 def main() -> None:
@@ -39,6 +41,14 @@ def main() -> None:
         raise SystemExit(
             f"Warstwy ikony mają różne rozmiary: {background.size} i {foreground.size}."
         )
+
+    scaled_size = tuple(round(dimension * FOREGROUND_SCALE) for dimension in foreground.size)
+    foreground = foreground.resize(scaled_size, Image.Resampling.LANCZOS)
+    crop_left = (foreground.width - background.width) // 2
+    crop_top = (foreground.height - background.height) // 2
+    foreground = foreground.crop(
+        (crop_left, crop_top, crop_left + background.width, crop_top + background.height)
+    )
 
     icon = Image.alpha_composite(background, foreground)
     icon = icon.resize(OUTPUT_SIZE, Image.Resampling.LANCZOS).convert("RGB")
